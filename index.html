@@ -312,11 +312,11 @@ tbody td{padding:10px 14px;white-space:nowrap;}
             <th onclick="sortAnom('MUNICIPIO')">Municipio &#8597;</th>
             <th onclick="sortAnom('PUESTO')">Puesto de Votacion &#8597;</th>
             <th onclick="sortAnom('MESA')">Mesa &#8597;</th>
-            <th onclick="sortAnom('Votos Mesa PRE')">Votos en Urna &#8597;</th>
-            <th onclick="sortAnom('Votos Cand. PRE')">Votos Candidato &#8597;</th>
-            <th onclick="sortAnom('Dif. Mesa Neta')">Diferencia &#8597;</th>
-            <th>Nivel</th>
-            <th>Estado</th>
+            <th onclick="sortAnom('Votos Mesa PRE')" title="Total de votos contados por los jurados la noche de la eleccion">&#128683; Jurados contaron &#8597;</th>
+            <th title="Lo que registro el escrutinio oficial dias despues">&#9989; Escrutinio oficial</th>
+            <th onclick="sortAnom('Dif. Mesa Neta')" title="Diferencia entre el conteo de jurados y el escrutinio oficial. Negativo = votos que desaparecieron">&#9888; Votos faltantes &#8597;</th>
+            <th>Gravedad</th>
+            <th>Estado sobre</th>
           </tr></thead>
           <tbody id="anom-body"></tbody>
         </table>
@@ -651,15 +651,30 @@ function renderAnom(page){
   const total=rows.length, pages=Math.max(1,Math.ceil(total/ANOM_PS)), start=(page-1)*ANOM_PS;
   document.getElementById('anom-info').textContent=`${total.toLocaleString('es-CO')} mesas`;
   document.getElementById('anom-body').innerHTML=rows.slice(start,start+ANOM_PS).map(r=>{
-    const d=r['Dif. Mesa Neta'], s=sevInfo(d);
-    const difCell=d<0?`<span class="badge b-red">${d.toLocaleString('es-CO')}</span>`:`<span class="badge b-green">+${d}</span>`;
+    const d=r['Dif. Mesa Neta']||0, s=sevInfo(d);
+    const pre=r['Votos Mesa PRE']||0;
+    const esc=pre+d;
+    const pct=pre>0?Math.max(0,Math.round((esc/pre)*100)):0;
+    const barColor=d<-300?'#dc2626':d<-100?'#d97706':'#2563eb';
+    const difCell=d<0
+      ?`<span class="badge b-red">&#8595; ${Math.abs(d).toLocaleString('es-CO')} votos menos</span>`
+      :`<span class="badge b-green">&#8593; +${d} votos extra</span>`;
+    const escCell=`<div style="display:flex;align-items:center;gap:8px">
+      <span style="font-weight:600;min-width:34px">${esc.toLocaleString('es-CO')}</span>
+      <div style="flex:1;background:#f1f5f9;border-radius:4px;height:7px;min-width:50px" title="${pct}% de lo contado por jurados">
+        <div style="width:${pct}%;background:${barColor};height:7px;border-radius:4px"></div>
+      </div>
+      <span style="font-size:11px;color:var(--muted)">${pct}%</span>
+    </div>`;
     return `<tr class="${s.cls}">
-      <td>${r.DEPARTAMENTO||''}</td><td>${r.MUNICIPIO||''}</td>
+      <td>${r.DEPARTAMENTO||''}</td>
+      <td>${r.MUNICIPIO||''}</td>
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${r.PUESTO||''}">${r.PUESTO||''}</td>
-      <td>${r.MESA??''}</td>
-      <td>${fmt(r['Votos Mesa PRE']||0)}</td>
-      <td style="font-weight:600;color:var(--accent)">${fmt(r['Votos Cand. PRE']||0)}</td>
-      <td>${difCell}</td><td>${s.badge}</td>
+      <td><strong>${r.MESA??''}</strong></td>
+      <td><strong>${fmt(pre)}</strong></td>
+      <td>${escCell}</td>
+      <td>${difCell}</td>
+      <td>${s.badge}</td>
       <td>${badge(r['Estado del sobre'],{BUENO:'green',MAL:'red'})}</td>
     </tr>`;
   }).join('');
